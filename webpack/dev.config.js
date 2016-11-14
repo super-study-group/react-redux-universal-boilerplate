@@ -1,5 +1,8 @@
+// https://moduscreate.com/webpack-2-tree-shaking-configuration/
+// http://javascriptplayground.com/blog/2016/10/moving-to-webpack-2/
+
 import webpack from 'webpack'
-import path from 'path'
+// import path from 'path'
 import _debug from 'debug'
 import WebpackIsomorphicToolsPlugin from 'webpack-isomorphic-tools/plugin'
 
@@ -11,16 +14,16 @@ const debug = _debug('app:webpack:config:dev')
 const srcDir = paths('src')
 const nodeModulesDir = paths('nodeModules')
 const globalStylesDir = paths('globalStyles')
-const deps = [
-  'react-router-redux/dist/ReactRouterRedux.min.js',
-  'redux/dist/redux.min.js'
-]
-const cssLoader = [
-  'css?modules',
-  'sourceMap',
-  'importLoaders=1',
-  'localIdentName=[name]__[local]___[hash:base64:5]'
-].join('&')
+// const deps = [
+//   'react-router-redux/dist/ReactRouterRedux.min.js',
+//   'redux/dist/redux.min.js'
+// ]
+// const cssLoader = [
+//   'css-loader?modules',
+//   'sourceMap',
+//   'importLoaders=1',
+//   'localIdentName=[name]__[local]___[hash:base64:5]'
+// ].join('&')
 const {
   SERVER_HOST,
   VENDOR_DEPENDENCIES,
@@ -49,81 +52,110 @@ const config = {
     publicPath: `http://${SERVER_HOST}:${WEBPACK_DEV_SERVER_PORT}/build/`
   },
   resolve: {
-    alias: {},
+    // alias: {},
 
     // Resolve the `./src` directory so we can avoid writing
     // ../../styles/base.css but styles/base.css
-    root: [srcDir],
+    // root: [srcDir],
+    modules: [
+      srcDir,
+      'node_modules',
+    ],
 
-    extensions: ['', '.js', '.jsx']
+    extensions: ['.js', '.json', '.jsx']
   },
   module: {
-    noParse: [],
-    preLoaders: [
+    // noParse: [],
+    // noParse: [/node_modules\/sinon/]
+    rules: [
       {
+        enforce: 'pre',
         test: /\.js[x]?$/,
-        loader: 'eslint',
+        loader: 'eslint-loader',
         include: [srcDir],
-        query: {
+        options: {
           rules: {
             'no-unused-vars': 'warn'
           }
         }
-      }
-    ],
-    loaders: [
+      },
       {
         test: /\.js[x]?$/,
-        loader: 'babel',
+        loader: 'babel-loader',
         exclude: [nodeModulesDir],
         include: [srcDir],
-        query: {
-          cacheDirectory: true
-        }
+        options: {
+          cacheDirectory: true,
+        },
       },
       {
         test: /\.json$/,
-        loader: 'json'
+        loader: 'json-loader'
       },
       {
         test: webpackIsomorphicToolsPlugin.regular_expression('styles'),
         include: [srcDir],
         exclude: [globalStylesDir],
-        loaders: [
-          'style',
-          cssLoader,
-          'postcss'
+        // loaders: [
+        //   'style-loader',
+        //   cssLoader,
+        //   'postcss-loader'
+        // ],
+        use: [
+          'style-loader',
+          // cssLoader,
+          {
+            loader: 'css-loader',
+            options: {
+              modules: true,
+              sourceMap: true,
+              importLoaders: 1,
+              localIdentName: '[name]__[local]___[hash:base64:5]'
+            }
+          },
+          'postcss-loader'
         ]
       },
       {
         test: /common\/styles\/global\/app\.css$/,
         include: [srcDir],
-        loaders: [
-          'style',
-          'css?sourceMap',
-          'postcss'
+        use: [
+          'style-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              sourceMap: true
+            }
+          },
+          'postcss-loader'
         ]
       },
       {
         test: /\.(woff|woff2|eot|ttf|svg)(\?v=\d+\.\d+\.\d+)?$/,
-        loader: 'file?name=fonts/[name].[ext]'
+        loader: 'file-loader',
+        options: {
+          name: 'fonts/[name].[ext]'
+        }
       },
       {
         test: webpackIsomorphicToolsPlugin.regular_expression('images'),
-        loader: 'url?limit=10000'
+        loader: 'url-loader',
+        options: {
+          limit: 10000
+        }
       }
-    ]
+    ],
   },
-  postcss: wPack => ([
-    require('postcss-import')({ addDependencyTo: wPack }),
-    require('postcss-url')(),
-    require('postcss-cssnext')()
-  ]),
+  // postcss: wPack => ([
+  //   require('postcss-import')({ addDependencyTo: wPack }),
+  //   require('postcss-url')(),
+  //   require('postcss-cssnext')()
+  // ]),
   plugins: [
-    new webpack.optimize.OccurrenceOrderPlugin(),
+    // new webpack.optimize.OccurrenceOrderPlugin(),
     new webpack.HotModuleReplacementPlugin(),
     new webpack.NoErrorsPlugin(),
-    new webpack.optimize.CommonsChunkPlugin('vendors', '[name].[hash].js'),
+    new webpack.optimize.CommonsChunkPlugin({ name: 'vendors', filename: '[name].[hash].js' }),
     new webpack.DefinePlugin({
       __CLIENT__,
       __SERVER__,
@@ -137,11 +169,11 @@ const config = {
 }
 
 // Optimizing rebundling
-deps.forEach(dep => {
-  const depPath = path.resolve(nodeModulesDir, dep)
-
-  config.resolve.alias[dep.split(path.sep)[0]] = depPath
-  config.module.noParse.push(depPath)
-})
+// deps.forEach(dep => {
+//   const depPath = path.resolve(nodeModulesDir, dep)
+//
+//   config.resolve.alias[dep.split(path.sep)[0]] = depPath
+//   config.module.noParse.push(depPath)
+// })
 
 export default config
